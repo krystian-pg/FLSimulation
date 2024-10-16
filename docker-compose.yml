@@ -1,0 +1,41 @@
+services:
+  server:
+    build: ./server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app
+      - ./server/ca.crt:/certs/ca.crt
+      - ./server/server.crt:/certs/server.crt
+      - ./server/server.key:/certs/server.key
+    networks:
+      - fl_network
+    command: python server.py
+
+  client1:
+    build: ./client
+    volumes:
+      - ./client:/app/client
+      - ./server/ca.crt:/certs/ca.crt
+    networks:
+      - fl_network
+    depends_on:
+      - server
+    command: python client.py
+
+  client2:
+    build: ./client
+    volumes:
+      - ./client:/app/client
+      - ./server/ca.crt:/certs/ca.crt
+    networks:
+      - fl_network
+    depends_on:
+      - server
+    command: python client.py
+
+  # Prometheus i Grafana zostały zakomentowane
+
+networks:
+  fl_network:
+    driver: bridge

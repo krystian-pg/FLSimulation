@@ -1,496 +1,677 @@
 # FLSimulation
 
----
+## **Spis Treści**
 
-## **Spis treści**
+1. [Wprowadzenie](#wprowadzenie)
+2. [Wymagania Wstępne](#wymagania-wstępne)
+3. [Struktura Projektu](#struktura-projektu)
+4. [Konfiguracja SSL](#konfiguracja-ssl)
+5. [Przygotowanie Środowiska](#przygotowanie-środowiska)
+6. [Budowanie i Uruchamianie Kontenerów](#budowanie-i-uruchamianie-kontenerów)
+7. [Opis Plików](#opis-plików)
+    - [docker-compose.yml](#docker-composeyml)
+    - [Dockerfile dla Serwera](#dockerfile-dla-serwera)
+    - [Dockerfile dla Klientów](#dockerfile-dla-klientów)
+    - [server.py](#serverpy)
+    - [client.py](#clientpy)
+    - [requirements.txt](#requirementstxt)
+8. [Monitorowanie i Logowanie](#monitorowanie-i-logowanie)
+9. [Rozwiązywanie Problemów](#rozwiązywanie-problemów)
+10. [Dodatkowe Informacje](#dodatkowe-informacje)
+11. [Licencja](#licencja)
 
-1. **Wymagania wstępne**
-2. **Ogólny zarys architektury**
-3. **Konfiguracja środowiska**
-4. **Przygotowanie kodu aplikacji**
-   - Serwer Flower
-   - Klient Flower
-5. **Tworzenie obrazów Dockera**
-   - Dockerfile dla serwera
-   - Dockerfile dla klienta
-6. **Konfiguracja Docker Compose**
-7. **Integracja monitoringu z Grafaną i Prometheusem**
-   - Konfiguracja Prometheusa
-   - Konfiguracja Grafany
-8. **Uruchomienie symulacji**
-9. **Monitorowanie sieci federacyjnej**
-10. **Podsumowanie**
+## **Wprowadzenie**
 
----
+Ten projekt demonstruje symulację Federated Learning (FL) z wykorzystaniem frameworka Flower (`flwr`) oraz Docker Compose. Umożliwia uruchomienie serwera FL oraz dwóch klientów FL w izolowanych kontenerach Docker, komunikujących się poprzez sieć Docker. Dodatkowo, konfiguracja obejmuje zabezpieczenie komunikacji za pomocą certyfikatów SSL.
 
-## **1. Wymagania wstępne**
+## **Wymagania Wstępne**
 
-Przed rozpoczęciem upewnij się, że masz zainstalowane następujące narzędzia:
+Przed rozpoczęciem upewnij się, że masz zainstalowane następujące narzędzia na swojej maszynie:
 
-- **Docker**: do konteneryzacji aplikacji.
-- **Docker Compose**: do zarządzania wieloma kontenerami Dockera.
-- **Python 3.8+**: do uruchamiania kodu lokalnie (opcjonalnie).
-- **Git**: do klonowania repozytoriów (opcjonalnie).
+- **Docker**: [Instalacja Dockera](https://docs.docker.com/get-docker/)
+- **Docker Compose**: [Instalacja Docker Compose](https://docs.docker.com/compose/install/)
+- **Git**
 
----
-
-## **2. Ogólny zarys architektury**
-
-- **Serwer Flower**: Koordynuje proces federacyjnego uczenia maszynowego.
-- **Klienci Flower**: Uruchamiają trening na lokalnych danych i komunikują się z serwerem.
-- **Prometheus**: Zbiera metryki z serwera i klientów.
-- **Grafana**: Wizualizuje zebrane metryki, umożliwiając monitorowanie stanu sieci.
-
----
-
-## **3. Konfiguracja środowiska**
-
-### **Instalacja Dockera i Docker Compose**
-
-Jeśli nie masz jeszcze zainstalowanego Dockera i Docker Compose, możesz je pobrać z oficjalnej strony:
-
-- **Docker**: [Instrukcja instalacji](https://docs.docker.com/get-docker/)
-- **Docker Compose**: [Instrukcja instalacji](https://docs.docker.com/compose/install/)
-
-Upewnij się, że Docker działa poprawnie, uruchamiając:
-
-```bash
-docker run hello-world
-```
-
-### **Struktura projektu**
-
-Stwórzmy katalog projektu i ustalmy jego strukturę:
+## **Struktura Projektu**
 
 ```
-federated-learning-project/
-├── server/
-│   ├── server.py
-│   └── Dockerfile
-├── client/
-│   ├── client.py
-│   └── Dockerfile
+FLSimulation/
 ├── docker-compose.yml
-├── prometheus/
-│   └── prometheus.yml
-└── grafana/
+├── server/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── ca.crt
+│   ├── server.crt
+│   └── server.key
+└── client/
+    ├── Dockerfile
+    ├── requirements.txt
+    ├── client.py
 ```
 
----
+- **docker-compose.yml**: Plik konfiguracji Docker Compose definiujący usługi serwera i klientów.
+- **server/**: Katalog zawierający pliki serwera FL.
+    - **Dockerfile**: Instrukcje do budowania obrazu Docker dla serwera.
+    - **requirements.txt**: Lista zależności Pythona dla serwera.
+    - **server.py**: Kod serwera Flower.
+    - **ca.crt**, **server.crt**, **server.key**: Certyfikaty SSL.
+- **client/**: Katalog zawierający pliki klientów FL.
+    - **Dockerfile**: Instrukcje do budowania obrazu Docker dla klientów.
+    - **requirements.txt**: Lista zależności Pythona dla klientów.
+    - **client.py**: Kod klienta Flower.
 
-## **4. Przygotowanie kodu aplikacji**
+## **Konfiguracja SSL**
 
-### **4.1. Serwer Flower**
+Aby zapewnić bezpieczną komunikację między serwerem a klientami, używamy certyfikatów SSL. Upewnij się, że posiadasz odpowiednie pliki certyfikatów:
 
-**Plik:** `server/server.py`
+1. **ca.crt**: Certyfikat urzędu certyfikacji (CA).
+2. **server.crt**: Certyfikat serwera.
+3. **server.key**: Klucz prywatny serwera.
+
+Umieść te pliki w katalogu `server/`. Upewnij się, że Docker ma dostęp do tych plików poprzez odpowiednią konfigurację wolumenów w `docker-compose.yml`.
+
+## **Przygotowanie Środowiska**
+
+1. **Klonowanie Repozytorium (opcjonalnie):**
+
+    ```bash
+    git clone https://github.com/twoje-repozytorium/FLSimulation.git
+    cd FLSimulation
+    ```
+
+2. **Umieszczenie Certyfikatów SSL:**
+
+    Umieść pliki `ca.crt`, `server.crt` i `server.key` w katalogu `server/`.
+
+## **Budowanie i Uruchamianie Kontenerów**
+
+Aby zbudować obrazy Docker i uruchomić kontenery, wykonaj następujące kroki:
+
+1. **Usunięcie Istniejących Kontenerów (opcjonalnie):**
+
+    ```bash
+    docker-compose down
+    ```
+
+2. **Czyszczenie Niepotrzebnych Zasobów Dockera (opcjonalnie):**
+
+    ```bash
+    docker system prune -f
+    ```
+
+3. **Budowanie Obrazów Docker:**
+
+    ```bash
+    docker-compose build
+    ```
+
+4. **Uruchomienie Kontenerów:**
+
+    ```bash
+    docker-compose up --build
+    ```
+
+    Logi z kontenerów będą wyświetlane w konsoli. Aby przerwać działanie kontenerów, użyj `Ctrl+C`.
+
+## **Opis Plików**
+
+### **docker-compose.yml**
+
+Plik `docker-compose.yml` definiuje trzy usługi: `server`, `client1` i `client2`. Usługi `Prometheus` i `Grafana` są zakomentowane i nie są uruchamiane.
+
+```yaml
+services:
+  server:
+    build: ./server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app
+      - ./server/ca.crt:/certs/ca.crt
+      - ./server/server.crt:/certs/server.crt
+      - ./server/server.key:/certs/server.key
+    networks:
+      - fl_network
+    command: python server.py
+
+  client1:
+    build: ./client
+    volumes:
+      - ./client:/app/client
+      - ./server/ca.crt:/certs/ca.crt
+    networks:
+      - fl_network
+    depends_on:
+      - server
+    command: python client.py
+
+  client2:
+    build: ./client
+    volumes:
+      - ./client:/app/client
+      - ./server/ca.crt:/certs/ca.crt
+    networks:
+      - fl_network
+    depends_on:
+      - server
+    command: python client.py
+
+  # Prometheus i Grafana zostały zakomentowane
+
+networks:
+  fl_network:
+    driver: bridge
+```
+
+#### **Wyjaśnienie Konfiguracji:**
+
+- **server**:
+  - **build**: Ścieżka do katalogu serwera, zawierającego Dockerfile.
+  - **ports**: Przekierowanie portu 8080 hosta na port 8080 kontenera.
+  - **volumes**: Montowanie katalogu serwera oraz certyfikatów do kontenera.
+  - **networks**: Przyłączenie do sieci `fl_network`.
+  - **command**: Komenda do uruchomienia serwera (`python server.py`).
+
+- **client1** i **client2**:
+  - **build**: Ścieżka do katalogu klienta, zawierającego Dockerfile.
+  - **volumes**: Montowanie katalogu klienta oraz certyfikatu CA do kontenera.
+  - **networks**: Przyłączenie do sieci `fl_network`.
+  - **depends_on**: Upewnienie się, że serwer jest uruchomiony przed klientami.
+  - **command**: Komenda do uruchomienia klienta (`python client.py`).
+
+- **networks**:
+  - Definicja sieci `fl_network` używanej przez wszystkie usługi.
+
+### **Dockerfile dla Serwera**
+
+Plik `Dockerfile` dla serwera znajduje się w katalogu `server/` i definiuje, jak zbudować obraz Docker dla serwera FL.
+
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["python", "server.py"]
+```
+
+#### **Wyjaśnienie Instrukcji:**
+
+1. **FROM python:3.9-slim**: Bazowy obraz Dockera z Pythonem 3.9 na bazie lekkiej dystrybucji.
+2. **WORKDIR /app**: Ustawienie katalogu roboczego na `/app`.
+3. **COPY requirements.txt requirements.txt**: Skopiowanie pliku `requirements.txt` do katalogu roboczego.
+4. **RUN pip install --no-cache-dir -r requirements.txt**: Instalacja zależności Pythona.
+5. **COPY . .**: Skopiowanie całego kodu serwera do katalogu roboczego.
+6. **EXPOSE 8080**: Otwarcie portu 8080.
+7. **CMD ["python", "server.py"]**: Domyślna komenda do uruchomienia serwera.
+
+### **Dockerfile dla Klientów**
+
+Plik `Dockerfile` dla klientów znajduje się w katalogu `client/` i definiuje, jak zbudować obraz Docker dla klientów FL.
+
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app/client
+
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["python", "client.py"]
+```
+
+#### **Wyjaśnienie Instrukcji:**
+
+1. **FROM python:3.9-slim**: Bazowy obraz Dockera z Pythonem 3.9 na bazie lekkiej dystrybucji.
+2. **WORKDIR /app/client**: Ustawienie katalogu roboczego na `/app/client`.
+3. **COPY requirements.txt requirements.txt**: Skopiowanie pliku `requirements.txt` do katalogu roboczego.
+4. **RUN pip install --no-cache-dir -r requirements.txt**: Instalacja zależności Pythona.
+5. **COPY . .**: Skopiowanie całego kodu klienta do katalogu roboczego.
+6. **CMD ["python", "client.py"]**: Domyślna komenda do uruchomienia klienta.
+
+### **server.py**
+
+Plik `server.py` zawiera kod serwera Flower, który zarządza federowanym uczeniem.
 
 ```python
 import flwr as fl
+from flwr.server.strategy import FedAvg
+import torch
 
+# Definicja modelu (zgodna z klientem)
+class Net(torch.nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.layer_1 = torch.nn.Linear(28 * 28, 128)
+        self.layer_2 = torch.nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = x.view(-1, 28 * 28)
+        x = torch.relu(self.layer_1(x))
+        x = self.layer_2(x)
+        return x
+
+# Definicja strategii
+class SaveModelStrategy(FedAvg):
+    def aggregate_fit(self, rnd, results, failures):
+        # Wywołanie metody nadrzędnej FedAvg.aggregate_fit
+        super_result = super().aggregate_fit(rnd, results, failures)
+        
+        # Sprawdzenie, czy super().aggregate_fit zwróciło krotkę
+        if isinstance(super_result, tuple):
+            aggregated_parameters = super_result[0]
+            metrics = super_result[1]
+        else:
+            aggregated_parameters = super_result
+            metrics = {}
+
+        if aggregated_parameters is not None:
+            # Konwersja Parameters na listę ndarray
+            ndarrays = fl.common.parameters_to_ndarrays(aggregated_parameters)
+            
+            # Tworzenie nowego modelu
+            model = Net()
+            
+            # Tworzenie state_dict z aggregated_weights
+            state_dict = {}
+            for (k, v) in zip(model.state_dict().keys(), ndarrays):
+                state_dict[k] = torch.tensor(v)
+            
+            # Ładowanie state_dict do modelu
+            model.load_state_dict(state_dict, strict=True)
+            
+            # Zapisanie modelu
+            torch.save(model.state_dict(), f"model_round_{rnd}.pth")
+        
+        # Zwrócenie aggregated_parameters oraz metrics
+        return aggregated_parameters, metrics
+
+# Uruchomienie serwera Flower
 def main():
-    # Definiujemy strategię agregacji
-    strategy = fl.server.strategy.FedAvg()
+    # Ścieżki do certyfikatów
+    cert_path = "/certs/server.crt"
+    key_path = "/certs/server.key"
+    ca_cert_path = "/certs/ca.crt"
 
-    # Uruchamiamy serwer Flower
+    # Odczyt certyfikatów jako bajty
+    with open(ca_cert_path, "rb") as ca_cert_file, \
+         open(cert_path, "rb") as cert_file, \
+         open(key_path, "rb") as key_file:
+        ca_cert = ca_cert_file.read()
+        server_cert = cert_file.read()
+        server_key = key_file.read()
+
+    strategy = SaveModelStrategy()
+
     fl.server.start_server(
         server_address="0.0.0.0:8080",
-        config={"num_rounds": 3},
+        config=fl.server.ServerConfig(num_rounds=3),
         strategy=strategy,
+        certificates=(ca_cert, server_cert, server_key)
     )
 
 if __name__ == "__main__":
     main()
 ```
 
-**Wyjaśnienie:**
+#### **Wyjaśnienie Kodowania:**
 
-- Importujemy bibliotekę Flower.
-- Definiujemy główną funkcję `main`, w której:
-  - Ustawiamy strategię federacyjną, np. FedAvg (średnia ważona wag modeli).
-  - Uruchamiamy serwer na adresie `0.0.0.0:8080`, aby był dostępny dla kontenerów klientów.
+1. **Definicja Modelu**: Model `Net` jest prostą siecią neuronową z dwiema warstwami liniowymi, kompatybilną z klientami.
 
-### **4.2. Klient Flower**
+2. **Definicja Strategii `SaveModelStrategy`**:
+    - **extend FedAvg**: Klasa `SaveModelStrategy` dziedziczy po `FedAvg`, implementując własną metodę `aggregate_fit`.
+    - **aggregate_fit**: Metoda ta agreguje wyniki od klientów, konwertuje je na `ndarray`, ładuje je do modelu i zapisuje model po każdej rundzie treningowej.
 
-**Plik:** `client/client.py`
+3. **Uruchomienie Serwera**:
+    - **Certyfikaty SSL**: Odczytanie certyfikatów SSL z zamontowanego katalogu `/certs/`.
+    - **Start Serwera**: Użycie `fl.server.start_server` do uruchomienia serwera FL na porcie `8080` z konfiguracją strategii i certyfikatami SSL.
+
+### **client.py**
+
+Plik `client.py` zawiera kod klienta Flower, który uczestniczy w federowanym uczeniu.
 
 ```python
 import flwr as fl
 import torch
-import torchvision
+from torch.nn import functional as F
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
-import torch.nn.functional as F
+import os
 
 # Definicja modelu
 class MNISTModel(pl.LightningModule):
     def __init__(self):
         super(MNISTModel, self).__init__()
         self.layer_1 = torch.nn.Linear(28 * 28, 128)
-        self.layer_2 = torch.nn.Linear(128, 256)
-        self.layer_3 = torch.nn.Linear(256, 10)
-    
+        self.layer_2 = torch.nn.Linear(128, 10)
+
     def forward(self, x):
-        batch_size, _, _, _ = x.size()
-        x = x.view(batch_size, -1)
-        x = F.relu(self.layer_1(x))
-        x = F.relu(self.layer_2(x))
-        x = self.layer_3(x)
+        x = x.view(-1, 28 * 28)
+        x = torch.relu(self.layer_1(x))
+        x = self.layer_2(x)
         return x
-    
+
     def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
         loss = F.cross_entropy(logits, y)
-        self.log('train_loss', loss)
         return loss
-    
+
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
-        return optimizer
+        return torch.optim.SGD(self.parameters(), lr=0.01)
 
 # Przygotowanie danych
 def load_data():
     transform = transforms.Compose([transforms.ToTensor()])
-    mnist_train = datasets.MNIST(root='/data', train=True, download=True, transform=transform)
-    train_dataset, _ = random_split(mnist_train, [5000, len(mnist_train) - 5000])
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    dataset = datasets.MNIST(
+        root="./data", train=True, download=True, transform=transform
+    )
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=32, num_workers=9)
     return train_loader
 
 # Definicja klienta Flower
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, model, train_loader):
-        self.model = model
-        self.train_loader = train_loader
+    def __init__(self):
+        self.model = MNISTModel()
+        self.train_loader = load_data()
 
-    def get_parameters(self):
+    def get_parameters(self, config):
         return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
-    
+
     def set_parameters(self, parameters):
         params_dict = zip(self.model.state_dict().keys(), parameters)
         state_dict = {k: torch.tensor(v) for k, v in params_dict}
         self.model.load_state_dict(state_dict, strict=True)
-    
+
     def fit(self, parameters, config):
         self.set_parameters(parameters)
         trainer = pl.Trainer(max_epochs=1, enable_progress_bar=False)
         trainer.fit(self.model, self.train_loader)
-        return self.get_parameters(), len(self.train_loader.dataset), {}
-    
+        return self.get_parameters(config), len(self.train_loader.dataset), {}
+
     def evaluate(self, parameters, config):
-        # Opcjonalnie implementacja ewaluacji
+        # Można dodać kod ewaluacji
         return 0.0, len(self.train_loader.dataset), {}
 
 def main():
-    # Inicjalizacja modelu i danych
-    model = MNISTModel()
-    train_loader = load_data()
+    # Ścieżka do certyfikatu CA
+    ca_cert_path = "/certs/ca.crt"
 
-    # Inicjalizacja klienta Flower
-    client = FlowerClient(model, train_loader)
+    # Sprawdzenie istnienia certyfikatu
+    if not os.path.exists(ca_cert_path):
+        raise FileNotFoundError("Brak certyfikatu CA.")
 
-    # Uruchomienie klienta
-    fl.client.start_numpy_client(server_address="server:8080", client=client)
+    client = FlowerClient()
+    fl.client.start_client(
+        server_address="server:8080",
+        client=client,
+        root_certificates=open(ca_cert_path, "rb").read()
+    )
 
 if __name__ == "__main__":
     main()
 ```
 
-**Wyjaśnienie:**
+#### **Wyjaśnienie Kodowania:**
 
-- Definiujemy model MNIST z użyciem PyTorch Lightning.
-- Przygotowujemy dane treningowe (subset MNIST).
-- Implementujemy klasę `FlowerClient`, która dziedziczy po `fl.client.NumPyClient`.
-- W `main()` uruchamiamy klienta, łącząc się z serwerem o nazwie `server` (co zostanie zdefiniowane w Docker Compose).
+1. **Definicja Modelu**: Model `MNISTModel` jest prostą siecią neuronową kompatybilną z PyTorch Lightning, używaną do klasyfikacji MNIST.
 
----
+2. **Przygotowanie Danych**: Funkcja `load_data` pobiera i przygotowuje dane MNIST, używając transformacji `ToTensor` i tworząc `DataLoader` z 9 workerami.
 
-## **5. Tworzenie obrazów Dockera**
+3. **Definicja Klienta `FlowerClient`**:
+    - **get_parameters**: Pobiera aktualne parametry modelu jako listę `ndarray`.
+    - **set_parameters**: Ustawia parametry modelu na podstawie otrzymanych wartości od serwera.
+    - **fit**: Trenuje model na lokalnych danych przez jedną epokę i zwraca zaktualizowane parametry oraz liczbę przykładów.
+    - **evaluate**: Funkcja ewaluacji (opcjonalna).
 
-### **5.1. Dockerfile dla serwera**
+4. **Uruchomienie Klienta**:
+    - **Certyfikat CA**: Sprawdzenie istnienia certyfikatu CA i jego załadowanie.
+    - **Start Klienta**: Użycie `fl.client.start_client` do połączenia z serwerem FL na adresie `server:8080` z wykorzystaniem certyfikatów SSL.
 
-**Plik:** `server/Dockerfile`
+### **requirements.txt**
 
-```Dockerfile
-# Używamy oficjalnego obrazu Python
-FROM python:3.9-slim
+Plik `requirements.txt` zawiera listę zależności Pythona niezbędnych do uruchomienia serwera i klientów FL.
 
-# Ustawiamy katalog roboczy
-WORKDIR /app
+#### **server/requirements.txt**
 
-# Kopiujemy pliki serwera
-COPY server.py /app/server.py
-
-# Instalujemy zależności
-RUN pip install flwr
-
-# Eksponujemy port serwera
-EXPOSE 8080
-
-# Uruchamiamy serwer
-CMD ["python", "server.py"]
+```plaintext
+flwr==1.12.0
+torch
+pytorch-lightning
+torchvision
+lightning[extra]
 ```
 
-**Wyjaśnienie:**
+#### **client/requirements.txt**
 
-- Bazujemy na lekkim obrazie `python:3.9-slim`.
-- Ustawiamy katalog roboczy `/app`.
-- Kopiujemy plik `server.py`.
-- Instalujemy potrzebne pakiety (w tym przypadku tylko `flwr`).
-- Eksponujemy port `8080`, na którym działa serwer Flower.
-- Definiujemy polecenie startowe.
-
-### **5.2. Dockerfile dla klienta**
-
-**Plik:** `client/Dockerfile`
-
-```Dockerfile
-# Używamy oficjalnego obrazu Python
-FROM python:3.9-slim
-
-# Ustawiamy katalog roboczy
-WORKDIR /app
-
-# Kopiujemy pliki klienta
-COPY client.py /app/client.py
-
-# Instalujemy zależności
-RUN pip install flwr torch torchvision pytorch-lightning
-
-# Upewniamy się, że katalog danych istnieje
-RUN mkdir -p /data
-
-# Uruchamiamy klienta
-CMD ["python", "client.py"]
+```plaintext
+flwr==1.12.0
+torch
+pytorch-lightning
+torchvision
+lightning[extra]
 ```
 
-**Wyjaśnienie:**
+## **Monitorowanie i Logowanie**
 
-- Podobnie jak w przypadku serwera, używamy obrazu `python:3.9-slim`.
-- Kopiujemy `client.py`.
-- Instalujemy wszystkie potrzebne pakiety.
-- Tworzymy katalog `/data` dla danych MNIST.
-- Definiujemy polecenie startowe.
+Po uruchomieniu kontenerów możesz monitorować ich działanie poprzez logi. Użyj poniższej komendy, aby śledzić logi wszystkich usług:
 
----
+```bash
+docker-compose logs -f
+```
 
-## **6. Konfiguracja Docker Compose**
+### **Opis Logów:**
 
-**Plik:** `docker-compose.yml`
+- **Serwer (`server-1`)**:
+    - Informacje o uruchomieniu serwera FL.
+    - Zbieranie i agregacja parametrów od klientów.
+    - Zapisanie modelu po każdej rundzie treningowej.
+
+- **Klienci (`client1-1`, `client2-1`)**:
+    - Informacje o połączeniu z serwerem FL.
+    - Odbieranie i trenowanie parametrów modelu.
+    - Wysyłanie zaktualizowanych parametrów z powrotem do serwera.
+
+## **Rozwiązywanie Problemów**
+
+### **1. Błąd `AttributeError: 'tuple' object has no attribute 'tensors'`**
+
+**Przyczyna:** W metodzie `aggregate_fit` klasy `SaveModelStrategy` próbujesz iterować po obiekcie `Parameters`, który jest krotką (`tuple`), a nie instancją `Parameters`.
+
+**Rozwiązanie:** Zmodyfikuj metodę `aggregate_fit`, aby poprawnie rozpakować krotkę zwracaną przez `super().aggregate_fit(...)`.
+
+```python
+def aggregate_fit(self, rnd, results, failures):
+    # Wywołanie metody nadrzędnej FedAvg.aggregate_fit
+    super_result = super().aggregate_fit(rnd, results, failures)
+    
+    # Sprawdzenie, czy super().aggregate_fit zwróciło krotkę
+    if isinstance(super_result, tuple):
+        aggregated_parameters = super_result[0]
+        metrics = super_result[1]
+    else:
+        aggregated_parameters = super_result
+        metrics = {}
+
+    if aggregated_parameters is not None:
+        # Konwersja Parameters na listę ndarray
+        ndarrays = fl.common.parameters_to_ndarrays(aggregated_parameters)
+        
+        # Tworzenie nowego modelu
+        model = Net()
+        
+        # Tworzenie state_dict z aggregated_weights
+        state_dict = {}
+        for (k, v) in zip(model.state_dict().keys(), ndarrays):
+            state_dict[k] = torch.tensor(v)
+        
+        # Ładowanie state_dict do modelu
+        model.load_state_dict(state_dict, strict=True)
+        
+        # Zapisanie modelu
+        torch.save(model.state_dict(), f"model_round_{rnd}.pth")
+    
+    # Zwrócenie aggregated_parameters oraz metrics
+    return aggregated_parameters, metrics
+```
+
+### **2. Ostrzeżenie dotyczące `version` w `docker-compose.yml`**
+
+**Przyczyna:** Atrybut `version` jest przestarzały w nowszych wersjach Docker Compose.
+
+**Rozwiązanie:** Usuń linię `version: '3.8'` z pliku `docker-compose.yml`.
 
 ```yaml
-version: '3.8'
-
 services:
-  server:
-    build: ./server
-    container_name: server
-    ports:
-      - "8080:8080"
-    networks:
-      - fl-network
-
-  client1:
-    build: ./client
-    depends_on:
-      - server
-    networks:
-      - fl-network
-
-  client2:
-    build: ./client
-    depends_on:
-      - server
-    networks:
-      - fl-network
-
-  prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    networks:
-      - fl-network
-
-  grafana:
-    image: grafana/grafana
-    ports:
-      - "3000:3000"
-    networks:
-      - fl-network
-
+  # ... pozostała konfiguracja
 networks:
-  fl-network:
+  fl_network:
     driver: bridge
 ```
 
-**Wyjaśnienie:**
+### **3. Ostrzeżenia dotyczące `tensorboardX`**
 
-- Definiujemy usługi:
-  - **server**: buduje obraz z katalogu `./server`, eksponuje port `8080`.
-  - **client1** i **client2**: dwa instancje klienta, budowane z `./client`, zależne od serwera.
-  - **prometheus**: używa oficjalnego obrazu Prometheusa, ładuje konfigurację z lokalnego pliku.
-  - **grafana**: używa oficjalnego obrazu Grafany.
-- Wszystkie usługi są połączone w sieci `fl-network`, co umożliwia komunikację między nimi.
+**Przyczyna:** `pytorch_lightning` usuwa `tensorboardX` jako zależność, co powoduje ostrzeżenia.
 
----
+**Rozwiązanie:** Zainstaluj dodatkowe zależności, aby wyeliminować ostrzeżenia.
 
-## **7. Integracja monitoringu z Grafaną i Prometheusem**
+1. **Dodaj `lightning[extra]` do `requirements.txt` klientów:**
 
-### **7.1. Konfiguracja Prometheusa**
+    ```plaintext
+    lightning[extra]
+    ```
 
-**Plik:** `prometheus/prometheus.yml`
+2. **Zbuduj ponownie obrazy Docker:**
 
-```yaml
-global:
-  scrape_interval: 5s
+    ```bash
+    docker-compose build
+    docker-compose up
+    ```
 
-scrape_configs:
-  - job_name: 'flower_server'
-    static_configs:
-      - targets: ['server:8080']
-  - job_name: 'flower_clients'
-    static_configs:
-      - targets: ['client1:8080', 'client2:8080']
-```
+### **4. Ostrzeżenie dotyczące `DataLoader`**
 
-**Wyjaśnienie:**
+**Przyczyna:** `DataLoader` nie ma wystarczającej liczby workerów, co może wpływać na wydajność.
 
-- Ustawiamy globalny interwał scrapowania na 5 sekund.
-- Definiujemy dwa zadania:
-  - **flower_server**: monitoruje serwer Flower.
-  - **flower_clients**: monitoruje klientów Flower.
-- Cele (targets) to nazwy usług zdefiniowanych w Docker Compose.
-
-### **7.2. Konfiguracja Grafany**
-
-- Po uruchomieniu Grafany, będziesz mógł uzyskać do niej dostęp pod adresem `http://localhost:3000`.
-- Domyślne dane logowania to **admin/admin**.
-- Po zalogowaniu należy:
-  - Dodać źródło danych Prometheus, wskazując na `http://prometheus:9090`.
-  - Importować gotowe dashboardy lub stworzyć własne.
-
-**Uwaga:** Pełna konfiguracja Grafany wymaga interakcji z interfejsem webowym, więc nie jest w całości możliwa do zautomatyzowania w plikach konfiguracyjnych.
-
----
-
-## **8. Uruchomienie symulacji**
-
-Przejdź do katalogu głównego projektu i uruchom Docker Compose:
-
-```bash
-docker-compose up --build
-```
-
-**Wyjaśnienie:**
-
-- **`--build`**: powoduje odbudowanie obrazów Dockera, jeśli zaszły zmiany.
-- Docker Compose uruchomi wszystkie usługi zgodnie z konfiguracją.
-
----
-
-## **9. Monitorowanie sieci federacyjnej**
-
-### **9.1. Dostęp do Grafany**
-
-- Otwórz przeglądarkę i wejdź na `http://localhost:3000`.
-- Zaloguj się (domyślnie **admin/admin**).
-- Dodaj źródło danych:
-  - Przejdź do **Configuration** -> **Data Sources**.
-  - Wybierz **Prometheus**.
-  - Ustaw URL na `http://prometheus:9090`.
-  - Zapisz.
-
-### **9.2. Tworzenie dashboardu**
-
-- Możesz teraz tworzyć własne dashboardy, dodając panele z metrykami z Prometheusa.
-- Możesz monitorować takie metryki jak:
-  - Liczba iteracji treningu.
-  - Czas trwania rund.
-  - Zużycie zasobów (CPU, RAM).
-
-**Uwaga:** Aby monitorować specyficzne metryki z Flower, musielibyśmy zmodyfikować kod serwera i klientów, aby eksportować metryki w formacie zrozumiałym dla Prometheusa.
-
----
-
-## **10. Podsumowanie**
-
-Stworzyliśmy symulację federacyjnego uczenia maszynowego z użyciem Flower i PyTorch Lightning, uruchomioną w kontenerach Dockerowych. Użyliśmy Docker Compose do zarządzania wieloma kontenerami i zintegrowaliśmy monitoring z Prometheusem i Grafaną.
-
----
-
-## **Dodatkowe wyjaśnienia i rozszerzenia**
-
-### **Eksportowanie metryk z Flower do Prometheusa**
-
-Aby eksportować metryki z aplikacji do Prometheusa, możemy użyć biblioteki **prometheus_client**.
-
-**Instalacja:**
-
-W plikach `Dockerfile` dodaj:
-
-```Dockerfile
-RUN pip install prometheus_client
-```
-
-**Modyfikacja kodu serwera:**
-
-W `server/server.py`, zaimportuj biblioteki i rozpocznij eksportowanie metryk:
+**Rozwiązanie:** Zwiększ liczbę workerów w `DataLoader` w pliku `client.py`.
 
 ```python
-from prometheus_client import start_http_server, Counter
-
-# Definiujemy licznik dla liczby rund
-ROUND_COUNTER = Counter('fl_rounds_total', 'Total number of federated learning rounds')
-
-def main():
-    # Startujemy serwer metryk Prometheusa
-    start_http_server(8000)
-
-    # Definiujemy strategię z wywołaniem zwrotnym po każdej rundzie
-    class StrategyWithMetrics(fl.server.strategy.FedAvg):
-        def aggregate_fit(self, rnd, results, failures):
-            # Inkrementujemy licznik rund
-            ROUND_COUNTER.inc()
-            return super().aggregate_fit(rnd, results, failures)
-
-    strategy = StrategyWithMetrics()
-
-    fl.server.start_server(
-        server_address="0.0.0.0:8080",
-        config={"num_rounds": 3},
-        strategy=strategy,
+def load_data():
+    transform = transforms.Compose([transforms.ToTensor()])
+    dataset = datasets.MNIST(
+        root="./data", train=True, download=True, transform=transform
     )
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=32, num_workers=9)
+    return train_loader
 ```
 
-**Wyjaśnienie:**
+## **Dodatkowe Informacje**
 
-- Używamy `prometheus_client` do eksportowania metryk.
-- Uruchamiamy serwer metryk na porcie `8000`.
-- Tworzymy licznik `ROUND_COUNTER` i inkrementujemy go po każdej rundzie.
+### **Testowanie Połączenia SSL**
 
-**Aktualizacja konfiguracji Prometheusa:**
+Aby upewnić się, że serwer Flower działa poprawnie i obsługuje SSL, możesz przetestować połączenie SSL za pomocą `openssl`:
 
-Dodaj port `8000` do celów monitorowania serwera:
-
-```yaml
-scrape_configs:
-  - job_name: 'flower_server'
-    static_configs:
-      - targets: ['server:8000']
+```bash
+openssl s_client -connect localhost:8080 -CAfile ./server/ca.crt
 ```
 
-**Modyfikacja kodu klienta:**
+Powinieneś zobaczyć informacje o poprawnym handshake SSL, podobne do tego:
 
-Podobnie możemy eksportować metryki z klienta, np. liczba epok treningu.
+```
+CONNECTED(00000003)
+...
+Verify return code: 0 (ok)
+```
+
+### **Sprawdzenie Certyfikatów w Kontenerach**
+
+Upewnij się, że pliki certyfikatów są poprawnie zamontowane w kontenerach serwera i klientów.
+
+1. **W Kontenerze Serwera:**
+
+    ```bash
+    docker exec -it flsimulation-server-1 /bin/sh
+    ls -l /certs/
+    ```
+
+    Powinieneś zobaczyć:
+
+    ```
+    -rw-r--r-- 1 root root ... /certs/ca.crt
+    -rw-r--r-- 1 root root ... /certs/server.crt
+    -rw------- 1 root root ... /certs/server.key
+    ```
+
+2. **W Kontenerze Klienta:**
+
+    ```bash
+    docker exec -it flsimulation-client1-1 /bin/sh
+    ls -l /certs/ca.crt
+    ```
+
+    Powinieneś zobaczyć:
+
+    ```
+    -rw-r--r-- 1 root root ... /certs/ca.crt
+    ```
+
+### **Sprawdzenie Sieci Docker**
+
+Upewnij się, że wszystkie usługi są połączone z tą samą siecią Docker (`fl_network`), co pozwala klientom rozpoznawać serwer pod nazwą `server`.
+
+```bash
+docker network inspect fl_network
+```
+
+Powinieneś zobaczyć, że wszystkie kontenery są połączone z tą samą siecią.
+
+### **Sprawdzenie Wersji Flower**
+
+Upewnij się, że zarówno serwer, jak i klienci używają tej samej wersji Flower (1.12.0).
+
+**Wewnątrz Kontenerów:**
+
+```bash
+docker exec -it flsimulation-server-1 /bin/sh
+pip show flwr
+```
+
+Powinieneś zobaczyć:
+
+```
+Name: flwr
+Version: 1.12.0
+...
+```
+
+Jeśli wersje się różnią, zaktualizuj Flower:
+
+```bash
+pip install --upgrade flwr
+```
+
+### **Sprawdzenie Innych Procesów na Porcie `8080`**
+
+Upewnij się, że na porcie `8080` nasłuchuje tylko serwer Flower:
+
+```bash
+sudo lsof -i :8080
+```
+
+Powinieneś zobaczyć tylko proces związany z serwerem Flower.
+
+## **Licencja**
+
+Ten projekt jest objęty licencją Apache License 2.0. Zobacz plik [LICENSE](LICENSE) w repozytorium, aby uzyskać więcej informacji.
 
 ---
 
-## **Uwagi końcowe**
-
-- **Skalowalność**: Możesz dodać więcej klientów, kopiując sekcję klienta w `docker-compose.yml` i zmieniając nazwy usług.
-- **Dane**: W obecnej konfiguracji każdy klient pobiera te same dane MNIST. W rzeczywistym scenariuszu federacyjnego uczenia klienci powinni mieć różne, nieudostępniane między sobą dane.
-- **Bezpieczeństwo**: W produkcyjnych zastosowaniach należy zadbać o bezpieczeństwo komunikacji (np. TLS) i ochronę danych.
-
-Jeśli masz pytania lub potrzebujesz dalszych wyjaśnień na którymkolwiek etapie, daj znać!
+Dziękujemy za skorzystanie z naszego projektu Federated Learning z Flower i Docker Compose. Jeśli masz pytania lub napotkasz problemy, prosimy o zgłoszenie ich poprzez system Issues na GitHubie.
